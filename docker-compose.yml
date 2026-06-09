@@ -1,0 +1,94 @@
+version: '3.9'
+
+services:
+  # ── PostgreSQL ──────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:15-alpine
+    container_name: stayease-postgres
+    environment:
+      POSTGRES_DB: stayease
+      POSTGRES_USER: stayease
+      POSTGRES_PASSWORD: stayease
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stayease"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis ───────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: stayease-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Spring Boot API ─────────────────────────────────────────────────────────
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: stayease-api
+    ports:
+      - "8080:8080"
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/stayease
+      DB_USERNAME: stayease
+      DB_PASSWORD: stayease
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: super-secret-jwt-key-that-is-at-least-256-bits-for-hmac-sha256
+      JWT_ACCESS_EXPIRY_MS: 900000
+      JWT_REFRESH_EXPIRY_DAYS: 7
+      CORS_ALLOWED_ORIGINS: http://localhost:3000
+      MAIL_HOST: mailhog
+      MAIL_PORT: 1025
+      MAIL_USERNAME: ""
+      MAIL_PASSWORD: ""
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/api/v1/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # ── Next.js Frontend ────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: stayease-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8080/api/v1
+      NEXT_PUBLIC_WS_URL: ws://localhost:8080/api/v1/ws
+    depends_on:
+      - api
+
+  # ── MailHog (dev SMTP) ──────────────────────────────────────────────────────
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: stayease-mailhog
+    ports:
+      - "1025:1025"  # SMTP
+      - "8025:8025"  # Web UI
+
+volumes:
+  postgres_data:
+  redis_data:
