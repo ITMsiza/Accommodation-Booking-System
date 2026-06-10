@@ -5,7 +5,10 @@ import { RoomListClient } from '@/features/rooms/RoomListClient'
 
 export const metadata: Metadata = { title: 'Browse Rooms' }
 
+export const dynamic = 'force-dynamic'
+
 export default function RoomsPage() {
+
   return (
     <div className="flex flex-col min-h-screen">
       <Header />

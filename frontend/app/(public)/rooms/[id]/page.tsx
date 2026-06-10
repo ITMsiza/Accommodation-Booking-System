@@ -5,9 +5,14 @@ import { RoomDetailClient } from '@/features/rooms/RoomDetailClient'
 
 export const metadata: Metadata = { title: 'Room Details' }
 
-export default async function RoomDetailPage({params,}: { params:{ id: string }}) 
-{
-  const { id } = await params
+export const dynamic = 'force-dynamic'
+
+export default async function RoomDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
   return (
     <div className="flex flex-col min-h-screen">
       <Header />

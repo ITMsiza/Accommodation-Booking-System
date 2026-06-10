@@ -4,6 +4,8 @@ import { LoginForm } from '@/features/auth/LoginForm'
 
 export const metadata: Metadata = { title: 'Sign In' }
 
+export const dynamic = 'force-dynamic'
+
 export default function LoginPage() {
   return (
     <div className="min-h-screen bg-stone-50 flex flex-col">

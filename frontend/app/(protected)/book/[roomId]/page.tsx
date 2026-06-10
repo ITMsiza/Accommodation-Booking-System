@@ -5,6 +5,8 @@ import { BookingFormClient } from '@/features/booking/BookingFormClient'
 
 export const metadata: Metadata = { title: 'Complete Your Booking' }
 
+export const dynamic = 'force-dynamic'
+
 export default async function BookingFormPage({ params }: {
   params: Promise<{ roomId: string }>;}) {
   const { roomId } = await params;
