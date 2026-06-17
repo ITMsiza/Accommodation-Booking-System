@@ -55,7 +55,7 @@ public class SecurityConfig {
                 // Admin endpoints
                 .requestMatchers("/admin/**").hasRole("ADMIN")
                 // Protected endpoints
-                //.requestMatchers("/notifications/**").authenticated()
+                .requestMatchers("/notifications/**").authenticated()
                 .anyRequest().authenticated()
                 
             )
