@@ -28,7 +28,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtTokenProvider jwtTokenProvider;
     private final UserRepository userRepository;
 
-    @Override
+    /*@Override
     protected void doFilterInternal(
             @NonNull HttpServletRequest request,
             @NonNull HttpServletResponse response,
@@ -56,12 +56,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                             new SimpleGrantedAuthority("ROLE_" + user.getRole().getName())
                         );
 
-                        //For testing
-
-    log.info("Authenticated user: {}", user.getEmail());
-    log.info("Role: {}", user.getRole().getName());
-    log.info("Authorities: {}", authorities);
-
                     UsernamePasswordAuthenticationToken authToken =
                             new UsernamePasswordAuthenticationToken(
                                     user,
@@ -78,5 +72,71 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }*/
+   @Override
+protected void doFilterInternal(
+        @NonNull HttpServletRequest request,
+        @NonNull HttpServletResponse response,
+        @NonNull FilterChain filterChain
+) throws ServletException, IOException {
+
+    final String authHeader = request.getHeader("Authorization");
+
+    log.info("Authorization Header: {}", authHeader);
+
+    if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+        filterChain.doFilter(request, response);
+        return;
     }
+
+    final String jwt = authHeader.substring(7);
+
+    try {
+        log.info("JWT: {}", jwt);
+
+        final String userEmail = jwtTokenProvider.extractUsername(jwt);
+
+        log.info("Email: {}", userEmail);
+
+        if (userEmail != null &&
+            SecurityContextHolder.getContext().getAuthentication() == null) {
+
+            User user = userRepository.findByEmailIgnoreCase(userEmail)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            log.info("User found: {}", user.getEmail());
+            log.info("Role from DB: {}", user.getRole().getName());
+
+            if (jwtTokenProvider.isTokenValid(jwt, user)) {
+
+                List<GrantedAuthority> authorities = List.of(
+                        new SimpleGrantedAuthority("ROLE_" + user.getRole().getName())
+                );
+
+                log.info("Authorities: {}", authorities);
+
+                UsernamePasswordAuthenticationToken authToken =
+                        new UsernamePasswordAuthenticationToken(
+                                user,
+                                null,
+                                authorities
+                        );
+
+                authToken.setDetails(
+                        new WebAuthenticationDetailsSource().buildDetails(request)
+                );
+
+                SecurityContextHolder.getContext().setAuthentication(authToken);
+
+                log.info("Authentication set in SecurityContext");
+            } else {
+                log.warn("Token validation failed");
+            }
+        }
+    } catch (Exception e) {
+        log.error("JWT authentication failed", e);
+    }
+
+    filterChain.doFilter(request, response);
+}
 }
